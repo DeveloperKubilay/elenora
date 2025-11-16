@@ -18,7 +18,7 @@ jobs:
 
                                     
             - name: 📦 Package setup
-              run: cp readme.md module/README.md && cp LICENSE module/LICENSE
+              run: cp package.json module/package.json && cp README.md module/README.md && cp LICENSE module/LICENSE
               working-directory: .
 
             - name: 🚀 publish
