@@ -1,0 +1,29 @@
+{
+  "name": "elenora",
+  "version": "1.0.0",
+  "description": "Production-ready, byte-based rolling file logger for Node.js.",
+  "main": "index.js",
+  "types": "",
+  "scripts": {
+    "test": "node test-logger.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DeveloperKubilay/elenora.git"
+  },
+  "keywords": [
+    "logger",
+    "logging",
+    "file-logger",
+    "rolling-file",
+    "rotation",
+    "nodejs",
+    "production"
+  ],
+  "author": "DeveloperKubilay",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DeveloperKubilay/elenora/issues"
+  },
+  "homepage": "https://github.com/DeveloperKubilay/elenora#readme"
+}
