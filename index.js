@@ -4,7 +4,7 @@ elenora.connect(console, {
     filename: 'logs/app.log',
     maxSize: 1024, // 1 KB
     backupCount: 3
-}); // 5 MB
+});
 
 for(let i = 0; i < 100000; i++) {
     console.log("This is a log message.");
