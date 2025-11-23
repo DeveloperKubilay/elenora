@@ -21,9 +21,9 @@ process.on('SIGINT', () => {
 module.exports = {
     connect: function (output, options = {}) {
         let maxSize = options.maxSize || 5 * 1024 * 1024; // Default 5 MB
-        let filename = options.filename || "app.log"; // Default log file name
-        let interval = options.interval || 1000; // Default flush interval 1 second
         let backupCount = options.backupCount || 0; // Default 0 backup files
+        let filename = backupCount > 0 && !options.filename ?  "logs/app.log" : options.filename || "app.log"; // Default log file name
+        let interval = options.interval || 1000; // Default flush interval 1 second
         let continueFromLast = options.continueFromLast || false; // Default: do not continue across restarts
         output._logPath = path.resolve(filename);
         const dirPath = path.dirname(output._logPath);
@@ -131,6 +131,7 @@ module.exports = {
         }
 
         output.log = function (...args) {
+            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
             waitlist.push({
                 level: 'LOG',
                 message: args.join(' ')
@@ -139,6 +140,7 @@ module.exports = {
         }
 
         output.info = function (...args) {
+            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
             waitlist.push({
                 level: 'INFO',
                 message: args.join(' ')
@@ -147,6 +149,7 @@ module.exports = {
         }
 
         output.warn = function (...args) {
+            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
             waitlist.push({
                 level: 'WARN',
                 message: args.join(' ')
@@ -155,6 +158,7 @@ module.exports = {
         }
 
         output.error = function (...args) {
+            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
             waitlist.push({
                 level: 'ERROR',
                 message: args.join(' ')
