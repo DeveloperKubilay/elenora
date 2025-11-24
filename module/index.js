@@ -20,9 +20,9 @@ process.on('SIGINT', () => {
 
 module.exports = {
     connect: function (output, options = {}) {
-        let maxSize = options.maxSize || 5 * 1024 * 1024; // Default 5 MB
-        let backupCount = options.backupCount || 0; // Default 0 backup files
-        let filename = backupCount > 0 && !options.filename ?  "logs/app.log" : options.filename || "app.log"; // Default log file name
+        let backupCount = Number.isInteger(options.backupCount) ? options.backupCount : 0; // Default 0 backup files
+        const effectiveMaxSize = (typeof options.maxSize !== 'undefined') ? options.maxSize : 5 * 1024 * 1024; // Default 5 MB; 0 means "no limit"
+        let filename = backupCount > 0 && !options.filename ? "logs/app.log" : options.filename || "app.log"; // Default log file name
         let interval = options.interval || 1000; // Default flush interval 1 second
         let continueFromLast = options.continueFromLast || false; // Default: do not continue across restarts
         output._logPath = path.resolve(filename);
@@ -69,8 +69,12 @@ module.exports = {
                 }
 
                 const chunks = [];
-                for (let i = 0; i < combinedBuf.length; i += maxSize) {
-                    chunks.push(combinedBuf.slice(i, i + maxSize));
+                if (effectiveMaxSize === 0) {
+                    if (combinedBuf.length) chunks.push(combinedBuf);
+                } else {
+                    for (let i = 0; i < combinedBuf.length; i += effectiveMaxSize) {
+                        chunks.push(combinedBuf.slice(i, i + effectiveMaxSize));
+                    }
                 }
 
                 const maxChunks = 1 + backupCount;
@@ -108,8 +112,8 @@ module.exports = {
                 }
 
                 let combinedBuf = Buffer.concat([ramlog, newBuf]);
-                if (combinedBuf.length > maxSize) {
-                    const excess = combinedBuf.length - maxSize;
+                if (effectiveMaxSize > 0 && combinedBuf.length > effectiveMaxSize) {
+                    const excess = combinedBuf.length - effectiveMaxSize;
                     combinedBuf = combinedBuf.slice(excess);
                 }
                 ramlog = combinedBuf;
