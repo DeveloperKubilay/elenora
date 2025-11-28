@@ -150,7 +150,7 @@ module.exports = {
             warning: 'WARNING',
             alert: 'ALERT',
             success: 'SUCCESS',
-            issues: "ISSUES'
+            issues: "ISSUES"
         };
 
         const oldFunctions = {
