@@ -1,13 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const translate = require('translate'); // Eklenen çeviri modülü
-
-translate.engine = 'google'; // Google Translate motoru kullanılacak
-translate.key = undefined; // API anahtarı gerekirse buraya eklenebilir
 
 const exitcallbacks = [];
 
-//To prevent logs from being lost during sudden crashes
 process.on('exit', (code) => {
     exitcallbacks.forEach(cb => cb());
 });
