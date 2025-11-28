@@ -148,7 +148,9 @@ module.exports = {
             slientwarn: 'SLIENTWARN',
             debug: 'DEBUG',
             warning: 'WARNING',
-            alert: 'ALERT'
+            alert: 'ALERT',
+            success: 'SUCCESS',
+            issues: "ISSUES'
         };
 
         const oldFunctions = {
