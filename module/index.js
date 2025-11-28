@@ -1,5 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const translate = require('translate'); // Eklenen çeviri modülü
+
+translate.engine = 'google'; // Google Translate motoru kullanılacak
+translate.key = undefined; // API anahtarı gerekirse buraya eklenebilir
 
 const exitcallbacks = [];
 
@@ -139,48 +143,40 @@ module.exports = {
         flushInterval.unref();
 
 
-        const oldVersion = {
+        const levelMap = {
+            log: 'LOG',
+            info: 'INFO',
+            warn: 'WARN',
+            error: 'ERROR',
+            slientlog: 'SLIENTLOG',
+            slienterror: 'SLIENTERROR',
+            slientwarn: 'SLIENTWARN',
+            debug: 'DEBUG',
+            warning: 'WARNING',
+            alert: 'ALERT'
+        };
+
+        const oldFunctions = {
             log: output.log,
             info: output.info,
             warn: output.warn,
             error: output.error
-        }
+        };
 
-        output.log = function (...args) {
-            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
-            waitlist.push({
-                level: 'LOG',
-                message: args.join(' ')
-            });
-            oldVersion.log.apply(output, args);
-        }
-
-        output.info = function (...args) {
-            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
-            waitlist.push({
-                level: 'INFO',
-                message: args.join(' ')
-            });
-            oldVersion.info.apply(output, args);
-        }
-
-        output.warn = function (...args) {
-            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
-            waitlist.push({
-                level: 'WARN',
-                message: args.join(' ')
-            });
-            oldVersion.warn.apply(output, args);
-        }
-
-        output.error = function (...args) {
-            args = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
-            waitlist.push({
-                level: 'ERROR',
-                message: args.join(' ')
-            });
-            oldVersion.error.apply(output, args);
-        }
+        Object.keys(levelMap).forEach(level => {
+            if (oldFunctions[level]) {
+                output[level] = function (...args) {
+                    const formattedArgs = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
+                    waitlist.push({ level: levelMap[level], message: formattedArgs.join(' ') });
+                    oldFunctions[level].apply(output, formattedArgs);
+                };
+            } else {
+                output[level] = function (...args) {
+                    const formattedArgs = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
+                    waitlist.push({ level: levelMap[level], message: formattedArgs.join(' ') });
+                };
+            }
+        });
     },
     newLog: function (...options) {
         let output = {};
