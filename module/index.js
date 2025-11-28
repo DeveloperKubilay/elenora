@@ -31,10 +31,22 @@ module.exports = {
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
-        if (!continueFromLast && fs.existsSync(output._logPath)) {
-            try {
-                fs.unlinkSync(output._logPath);
-            } catch { }
+        if (!continueFromLast) {
+            if (fs.existsSync(output._logPath)) {
+                try {
+                    fs.unlinkSync(output._logPath);
+                } catch { }
+            }
+            if (backupCount > 0) {
+                for (let i = 0; i < backupCount; i++) {
+                    const backupPath = path.join(dirPath, `Backup_${i}_${path.basename(output._logPath)}`);
+                    if (fs.existsSync(backupPath)) {
+                        try {
+                            fs.unlinkSync(backupPath);
+                        } catch { }
+                    }
+                }
+            }
         }
         if (!fs.existsSync(output._logPath)) {
             fs.writeFileSync(output._logPath, '');
