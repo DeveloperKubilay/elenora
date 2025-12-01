@@ -1,6 +1,6 @@
 {
   "name": "elenora",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Production-ready, byte-based rolling file logger for Node.js.",
   "main": "index.js",
   "types": "",
