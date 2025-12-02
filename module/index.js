@@ -165,7 +165,7 @@ module.exports = {
                 output[level] = function (...args) {
                     const formattedArgs = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg);
                     waitlist.push({ level: levelMap[level], message: formattedArgs.join(' ') });
-                    oldFunctions[level].apply(output, formattedArgs);
+                    oldFunctions[level].apply(output, args);
                 };
             } else {
                 output[level] = function (...args) {
