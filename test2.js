@@ -4,11 +4,9 @@ elenora.connect(console, {
     maxSize: 1024, // 1 KB
     backupCount: 3
 });
-/*
-for(let i = 0; i < 100000; i++) {
-    console.log("This is a log message.");
+for(let i = 0; i < 1000; i++) {
+    console.log("This is a log message " + i + " " + "x".repeat(100));
 }
-*/
 function test(){
     console.log("Test function log message.");
 }
