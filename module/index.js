@@ -22,7 +22,7 @@ module.exports = {
         let backupCount = Number.isInteger(options.backupCount) ? options.backupCount : 0; // Default 0 backup files
         const effectiveMaxSize = (typeof options.maxSize !== 'undefined') ? options.maxSize : 5 * 1024 * 1024; // Default 5 MB; 0 means "no limit"
         let filename = backupCount > 0 && !options.filename ? "logs/app.log" : options.filename || "app.log"; // Default log file name
-        let interval = options.interval || 1000; // Default flush interval 1 second
+        let interval = options.interval || 5000; // Default flush interval 5 seconds
         let continueFromLast = options.continueFromLast || false; // Default: do not continue across restarts
         output._logPath = path.resolve(filename);
         const dirPath = path.dirname(output._logPath);
@@ -30,6 +30,8 @@ module.exports = {
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true });
         }
+
+        // Initial cleanup if not continuing from last session
         if (!continueFromLast) {
             if (fs.existsSync(output._logPath)) {
                 try {
@@ -47,96 +49,134 @@ module.exports = {
                 }
             }
         }
-        if (!fs.existsSync(output._logPath)) {
-            fs.writeFileSync(output._logPath, '');
+
+        let stream;
+        let currentSize = 0;
+        const waitlist = [];
+
+        function openStream() {
+            if (fs.existsSync(output._logPath)) {
+                try {
+                    const stats = fs.statSync(output._logPath);
+                    currentSize = stats.size;
+                } catch (e) {
+                    currentSize = 0;
+                }
+            } else {
+                currentSize = 0;
+            }
+            
+            stream = fs.createWriteStream(output._logPath, { flags: 'a' });
+            stream.on('error', (err) => {
+                console.error("Elenora Logger Stream Error:", err);
+            });
         }
 
-        const waitlist = [];
-        let ramlog = backupCount ? Buffer.alloc(0) : "";
+        // Initialize stream
+        openStream();
 
-        function flushLogs() {
+        function rotateLogs() {
+            if (stream) {
+                stream.destroy();
+                stream = null;
+            }
+
+            const baseName = path.basename(output._logPath);
+
+            // Shift backups: Backup_N-1 -> Backup_N
+            for (let i = backupCount - 1; i > 0; i--) {
+                const src = path.join(dirPath, `Backup_${i - 1}_${baseName}`);
+                const dest = path.join(dirPath, `Backup_${i}_${baseName}`);
+                if (fs.existsSync(src)) {
+                    try {
+                        fs.renameSync(src, dest);
+                    } catch (e) { }
+                }
+            }
+
+            // Current log -> Backup_0
+            if (backupCount > 0) {
+                const firstBackup = path.join(dirPath, `Backup_0_${baseName}`);
+                if (fs.existsSync(output._logPath)) {
+                    try {
+                        fs.renameSync(output._logPath, firstBackup);
+                    } catch (e) { }
+                }
+            } else {
+                // If no backups kept, just delete current log to start fresh
+                if (fs.existsSync(output._logPath)) {
+                    try {
+                        fs.unlinkSync(output._logPath);
+                    } catch (e) { }
+                }
+            }
+
+            openStream();
+        }
+
+        function flushLogs(isSync = false) {
             if (waitlist.length === 0) return;
+
             const date = new Date().toLocaleString('tr-TR', { timeZone: options.timeZone });
             const formatted = options.Formatter
                 ? waitlist.map(entry => options.Formatter(entry, date))
                 : waitlist.map(entry => `[${entry.level}] ${date} - ${entry.message}\n`);
 
-            if (backupCount) {
-                let currentBuf = Buffer.alloc(0);
-                try {
-                    if (fs.existsSync(output._logPath)) {
-                        currentBuf = fs.readFileSync(output._logPath);
-                    }
-                } catch { }
+            const dataBuf = Buffer.concat(formatted.map(item => Buffer.isBuffer(item) ? item : Buffer.from(String(item))));
 
-                const newBuf = Buffer.isBuffer(formatted[0])
-                    ? Buffer.concat(formatted.map(b => Buffer.isBuffer(b) ? b : Buffer.from(String(b))))
-                    : Buffer.from(formatted.join(''), 'utf8');
-                let combinedBuf = Buffer.concat([currentBuf, newBuf]);
+            if (dataBuf.length === 0) return;
 
-                if (!combinedBuf.length) {
-                    waitlist.length = 0;
-                    return;
+            let offset = 0;
+            while (offset < dataBuf.length) {
+                if (effectiveMaxSize > 0 && currentSize >= effectiveMaxSize) {
+                    rotateLogs();
                 }
 
-                const chunks = [];
-                if (effectiveMaxSize === 0) {
-                    if (combinedBuf.length) chunks.push(combinedBuf);
+                const remainingSpace = effectiveMaxSize > 0 ? effectiveMaxSize - currentSize : dataBuf.length - offset;
+                // If remaining space is 0 or less (should be handled by rotateLogs above, but for safety), rotate.
+                // Also handle case where a single log entry might be larger than maxSize (write at least something or force rotate)
+                // Here we strictly respect maxSize.
+                
+                let chunkSize = effectiveMaxSize > 0 ? Math.min(remainingSpace, dataBuf.length - offset) : dataBuf.length - offset;
+                
+                if (chunkSize <= 0) {
+                    rotateLogs();
+                    chunkSize = effectiveMaxSize > 0 ? Math.min(effectiveMaxSize, dataBuf.length - offset) : dataBuf.length - offset;
+                }
+
+                const chunk = dataBuf.slice(offset, offset + chunkSize);
+
+                if (isSync) {
+                    if (stream) {
+                        stream.destroy();
+                        stream = null;
+                    }
+                    try {
+                        fs.appendFileSync(output._logPath, chunk);
+                    } catch (e) {
+                        console.error("Elenora Logger Sync Write Error:", e);
+                    }
                 } else {
-                    for (let i = 0; i < combinedBuf.length; i += effectiveMaxSize) {
-                        chunks.push(combinedBuf.slice(i, i + effectiveMaxSize));
+                    if (!stream || stream.destroyed || stream.closed) {
+                        openStream();
                     }
+                    stream.write(chunk);
                 }
 
-                const maxChunks = 1 + backupCount;
-                if (chunks.length > maxChunks) {
-                    chunks.splice(0, chunks.length - maxChunks);
-                }
-
-                const latestIndex = chunks.length - 1;
-
-                for (let i = backupCount - 1; i >= 0; i--) {
-                    const src = i === 0
-                        ? output._logPath
-                        : path.join(dirPath, `Backup_${i - 1}_${path.basename(output._logPath)}`);
-                    const dest = path.join(dirPath, `Backup_${i}_${path.basename(output._logPath)}`);
-                    if (fs.existsSync(src)) {
-                        try {
-                            fs.copyFileSync(src, dest);
-                        } catch { }
-                    }
-                }
-
-                fs.writeFileSync(output._logPath, chunks[latestIndex] || Buffer.alloc(0));
-
-                let backupChunkIndex = latestIndex - 1;
-                for (let i = 0; i < backupCount && backupChunkIndex >= 0; i++, backupChunkIndex--) {
-                    const backupPath = path.join(dirPath, `Backup_${i}_${path.basename(output._logPath)}`);
-                    fs.writeFileSync(backupPath, chunks[backupChunkIndex]);
-                }
-            } else {
-                const newBuf = Buffer.isBuffer(formatted[0])
-                    ? Buffer.concat(formatted.map(b => Buffer.isBuffer(b) ? b : Buffer.from(String(b))))
-                    : Buffer.from(formatted.join(''), 'utf8');
-                if (!Buffer.isBuffer(ramlog)) {
-                    ramlog = Buffer.from(ramlog, 'utf8');
-                }
-
-                let combinedBuf = Buffer.concat([ramlog, newBuf]);
-                if (effectiveMaxSize > 0 && combinedBuf.length > effectiveMaxSize) {
-                    const excess = combinedBuf.length - effectiveMaxSize;
-                    combinedBuf = combinedBuf.slice(excess);
-                }
-                ramlog = combinedBuf;
-                fs.writeFileSync(output._logPath, combinedBuf);
+                currentSize += chunk.length;
+                offset += chunk.length;
             }
+            
             waitlist.length = 0;
         }
 
-        exitcallbacks.push(flushLogs);
-        const flushInterval = setInterval(() => flushLogs(), interval);
-        flushInterval.unref();
+        exitcallbacks.push(() => {
+            flushLogs(true);
+            if (stream) stream.destroy();
+        });
 
+        const flushInterval = setInterval(flushLogs, interval);
+        flushInterval.unref();
 
         const levelMap = {
             log: 'LOG',
