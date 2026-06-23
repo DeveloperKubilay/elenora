@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 
 const exitcallbacks = [];
 
@@ -27,24 +28,61 @@ module.exports = {
         output._logPath = path.resolve(filename);
         const dirPath = path.dirname(output._logPath);
 
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true });
-        }
+        let isRemote = false;
+        let remoteSocket = null;
 
-        // Initial cleanup if not continuing from last session
-        if (!continueFromLast) {
-            if (fs.existsSync(output._logPath)) {
-                try {
-                    fs.unlinkSync(output._logPath);
-                } catch { }
+        if (options.remoteServer && options.remoteServer.url) {
+            isRemote = true;
+            function connectRemote() {
+                const parts = options.remoteServer.url.split(':');
+                const host = parts[0] || '127.0.0.1';
+                const port = parts[1] || 8081;
+                remoteSocket = new net.Socket();
+                remoteSocket.connect(port, host, () => {
+                    const authStr = `auth|${options.remoteServer.password || ''}|${options.remoteServer.tag || 'unknown'}\n`;
+                    remoteSocket.write(authStr);
+                });
+                remoteSocket.on('error', (err) => {
+                    console.error("Elenora Remote Logger Error:", err.message);
+                });
+                remoteSocket.on('close', () => {
+                    setTimeout(connectRemote, 5000);
+                });
             }
-            if (backupCount > 0) {
-                for (let i = 0; i < backupCount; i++) {
-                    const backupPath = path.join(dirPath, `Backup_${i}_${path.basename(output._logPath)}`);
-                    if (fs.existsSync(backupPath)) {
-                        try {
-                            fs.unlinkSync(backupPath);
-                        } catch { }
+            connectRemote();
+
+            if (typeof options.remoteServer.metadata === 'function') {
+                const intervalTime = options.remoteServer.metadataInterval || 5000;
+                const metaInterval = setInterval(async () => {
+                    try {
+                        const metaData = await options.remoteServer.metadata();
+                        if (remoteSocket && !remoteSocket.destroyed) {
+                            remoteSocket.write(`meta|${JSON.stringify(metaData)}\n`);
+                        }
+                    } catch (e) {}
+                }, intervalTime);
+                metaInterval.unref();
+            }
+        } else {
+            if (!fs.existsSync(dirPath)) {
+                fs.mkdirSync(dirPath, { recursive: true });
+            }
+
+            // Initial cleanup if not continuing from last session
+            if (!continueFromLast) {
+                if (fs.existsSync(output._logPath)) {
+                    try {
+                        fs.unlinkSync(output._logPath);
+                    } catch { }
+                }
+                if (backupCount > 0) {
+                    for (let i = 0; i < backupCount; i++) {
+                        const backupPath = path.join(dirPath, `Backup_${i}_${path.basename(output._logPath)}`);
+                        if (fs.existsSync(backupPath)) {
+                            try {
+                                fs.unlinkSync(backupPath);
+                            } catch { }
+                        }
                     }
                 }
             }
@@ -55,6 +93,7 @@ module.exports = {
         const waitlist = [];
 
         function openStream() {
+            if (isRemote) return;
             if (fs.existsSync(output._logPath)) {
                 try {
                     const stats = fs.statSync(output._logPath);
@@ -76,6 +115,7 @@ module.exports = {
         openStream();
 
         function rotateLogs() {
+            if (isRemote) return;
             if (stream) {
                 stream.destroy();
                 stream = null;
@@ -126,6 +166,14 @@ module.exports = {
 
             if (dataBuf.length === 0) return;
 
+            if (isRemote) {
+                if (remoteSocket && !remoteSocket.destroyed) {
+                    remoteSocket.write(dataBuf);
+                }
+                waitlist.length = 0;
+                return;
+            }
+
             let offset = 0;
             while (offset < dataBuf.length) {
                 if (effectiveMaxSize > 0 && currentSize >= effectiveMaxSize) {
@@ -133,10 +181,6 @@ module.exports = {
                 }
 
                 const remainingSpace = effectiveMaxSize > 0 ? effectiveMaxSize - currentSize : dataBuf.length - offset;
-                // If remaining space is 0 or less (should be handled by rotateLogs above, but for safety), rotate.
-                // Also handle case where a single log entry might be larger than maxSize (write at least something or force rotate)
-                // Here we strictly respect maxSize.
-                
                 let chunkSize = effectiveMaxSize > 0 ? Math.min(remainingSpace, dataBuf.length - offset) : dataBuf.length - offset;
                 
                 if (chunkSize <= 0) {

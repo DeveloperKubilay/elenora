@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Elenora</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: var(--bg-dark);
+        }
+        .login-card {
+            background-color: var(--bg-panel);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .login-card h2 {
+            margin-bottom: 24px;
+            color: #fff;
+            font-weight: 600;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus {
+            border-color: var(--accent);
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+        .error-msg {
+            color: var(--log-error);
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <h2>Elenora Log System</h2>
+            <div id="error-msg" class="error-msg">Incorrect password.</div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required autofocus>
+                </div>
+                <button type="submit" class="btn-primary">Access Dashboard</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.style.display = 'block';
+                }
+            } catch(err) {
+                errorMsg.innerText = 'Network error. Try again.';
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

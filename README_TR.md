@@ -12,6 +12,7 @@ Amacı net: logları belirlediğin boyut sınırında tutmak, yedek dosyaları y
 - **Formatter desteği**: her log satırını istediğin formatta (string veya Buffer) üretebilirsin.
 - **Console entegrasyonu**: doğrudan `console` nesnesini sarabilir veya bağımsız logger nesneleri oluşturabilirsin.
 - **`continueFromLast` ayarı**: uygulama yeniden başladığında eski loglar silinsin mi, yoksa devam mı edilsin, konfigüre edebilirsin.
+- **Remote server desteği**: birden fazla servisi tek yerden izlemek için logları merkezi bir sunucuya aktar.
 
 ## Kurulum
 
@@ -149,6 +150,37 @@ function bufferFormatter(entry, date) {
   return Buffer.from(line, 'utf8');
 }
 ```
+
+## Remote Server
+
+Birden fazla servisi tek bir yerden takip etmek istiyorsan, logları merkezi bir sunucuya akıtabilirsin. Config’e `remoteServer` eklemen yeterli:
+
+```js
+const elenora = require(‘elenora’);
+
+elenora.connect(console, {
+    backupCount: 3,
+    remoteServer: {
+        url: ‘127.0.0.1:8081’,
+        tag: ‘backend/server-1’,
+        password: ‘test’,
+        metadata: () => ({
+            cpu: process.cpuUsage(),
+            memory: process.memoryUsage().heapUsed
+        }),
+        metadataInterval: 5000
+    }
+});
+
+console.log(‘Servis başladı’);
+```
+
+- `url`: sunucu adresi (TCP)
+- `tag`: dashboard’da bu servisi tanımlamak için kullanılır
+- `password`: auth token
+- `metadata`: özel metriklerini döndüren fonksiyon, `metadataInterval` ms’de bir gönderilir
+
+Server kodu GitHub’da `/server` klasöründe. `node server/index.js` ile çalıştır, `http://localhost:8080` adresinden web dashboard’a ulaş.
 
 ## Rotation Detayları
 

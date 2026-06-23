@@ -12,6 +12,7 @@ Provides predictable file rotation, backup management and crash-safe flushing wi
 - **Pluggable formatter**: custom format per log entry (string or Buffer).
 - **Console integration**: wrap `console` or create dedicated logger instances.
 - **`continueFromLast` option**: start with a clean file or continue on top of existing logs.
+- **Remote server support**: stream logs to a centralized server with metadata tracking.
 
 ## Install
 
@@ -149,6 +150,37 @@ function bufferFormatter(entry, date) {
 	return Buffer.from(line, 'utf8');
 }
 ```
+
+## Remote Server
+
+You can stream logs to a centralized server for monitoring multiple services. Just add `remoteServer` to your config:
+
+```js
+const elenora = require('elenora');
+
+elenora.connect(console, {
+    backupCount: 3,
+    remoteServer: {
+        url: '127.0.0.1:8081',
+        tag: 'backend/server-1',
+        password: 'test',
+        metadata: () => ({
+            cpu: process.cpuUsage(),
+            memory: process.memoryUsage().heapUsed
+        }),
+        metadataInterval: 5000
+    }
+});
+
+console.log('Service started');
+```
+
+- `url`: server address (TCP)
+- `tag`: identifies this service in the dashboard
+- `password`: authentication token
+- `metadata`: function that returns custom metrics, sent at `metadataInterval` ms
+
+The server code is in the `/server` folder on GitHub. Run it with `node server/index.js` and visit `http://localhost:8080` for the web dashboard.
 
 ## Rotation Details
 

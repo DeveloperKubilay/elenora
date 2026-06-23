@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elenora Logs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Elenora Logs</h2>
+                <div class="pulse-indicator" id="global-pulse"></div>
+            </div>
+            <div class="tree-container" id="tree-root">
+                <div class="loading-tree">Loading sources...</div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <header class="topbar">
+                <div class="tag-info">
+                    <span class="status-dot" id="stream-status"></span>
+                    <h1 id="current-tag">Select a log source...</h1>
+                </div>
+                <div id="metadata-pills" class="metadata-pills"></div>
+                <div class="actions">
+                    <div class="tabs" id="view-tabs" style="display:none;">
+                        <button class="tab-btn active" data-tab="logs">Logs</button>
+                        <button class="tab-btn" data-tab="metrics">Metrics</button>
+                    </div>
+                    <button id="clear-btn" class="btn">Clear View</button>
+                    <label class="toggle">
+                        <input type="checkbox" id="autoscroll-toggle" checked>
+                        <span class="slider"></span>
+                        <span class="label-text">Auto-scroll</span>
+                    </label>
+                </div>
+            </header>
+            
+            <div class="log-viewer" id="log-viewer">
+                <div class="empty-state" id="empty-state">
+                    <div class="icon">📄</div>
+                    <p>Select a log source from the sidebar to start streaming.</p>
+                </div>
+                <div class="logs-container" id="logs-container"></div>
+            </div>
+            
+            <div class="metrics-viewer" id="metrics-viewer" style="display:none;">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Errors & Warnings</h3>
+                        <canvas id="chart-errors"></canvas>
+                    </div>
+                    <div class="chart-card" id="custom-meta-card" style="display:none;">
+                        <h3>Custom Metadata</h3>
+                        <canvas id="chart-system"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
