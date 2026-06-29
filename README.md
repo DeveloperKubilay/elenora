@@ -4,6 +4,33 @@ Production‑ready, byte-based rolling file logger for Node.js.
 
 Provides predictable file rotation, backup management and crash-safe flushing with zero runtime dependencies.
 
+## Quick Start
+
+```js
+const elenora = require('elenora');
+
+// Wrap console and write to logs/app.log
+elenora.connect(console, {
+	filename: 'logs/app.log',
+	maxSize: 5 * 1024 * 1024, // 5 MB
+	backupCount: 3,		//max: 5MB*3 file
+	continueFromLast: true,   // keep history across restarts
+	interval: 1000             // flush interval in ms
+});
+
+console.log('Server started');
+console.info('Listening on port 3000');
+console.warn('Spicy warning');
+console.error('Something exploded');
+```
+
+## Install
+
+```bash
+npm install elenora
+```
+
+
 ## Features
 
 - **Byte-based rotation**: `maxSize` is enforced in bytes, not characters.
@@ -14,31 +41,6 @@ Provides predictable file rotation, backup management and crash-safe flushing wi
 - **`continueFromLast` option**: start with a clean file or continue on top of existing logs.
 - **Remote server support**: stream logs to a centralized server with metadata tracking.
 
-## Install
-
-```bash
-npm install elenora
-```
-
-## Quick Start
-
-```js
-const elenora = require('elenora');
-
-// Wrap console and write to logs/app.log
-elenora.connect(console, {
-	filename: 'logs/app.log',
-	maxSize: 5 * 1024 * 1024, // 5 MB
-	backupCount: 3,
-	continueFromLast: true,   // keep history across restarts
-	interval: 500             // flush interval in ms
-});
-
-console.log('Server started');
-console.info('Listening on port 3000');
-console.warn('Spicy warning');
-console.error('Something exploded');
-```
 
 This keeps up to `1 + backupCount` chunks on disk:
 

@@ -25,8 +25,14 @@ module.exports = {
         let filename = backupCount > 0 && !options.filename ? "logs/app.log" : options.filename || "app.log"; // Default log file name
         let interval = options.interval || 5000; // Default flush interval 5 seconds
         let continueFromLast = options.continueFromLast || false; // Default: do not continue across restarts
+        const includeTimestamp = options.timestamp !== false;
         output._logPath = path.resolve(filename);
         const dirPath = path.dirname(output._logPath);
+        const formatEntry = options.Formatter
+            ? (entry, date) => options.Formatter(entry, date)
+            : includeTimestamp
+                ? (entry, date) => `[${entry.level}] ${date} - ${entry.message}\n`
+                : (entry) => `[${entry.level}] ${entry.message}\n`;
 
         let isRemote = false;
         let remoteSocket = null;
@@ -157,10 +163,8 @@ module.exports = {
         function flushLogs(isSync = false) {
             if (waitlist.length === 0) return;
 
-            const date = new Date().toLocaleString('tr-TR', { timeZone: options.timeZone });
-            const formatted = options.Formatter
-                ? waitlist.map(entry => options.Formatter(entry, date))
-                : waitlist.map(entry => `[${entry.level}] ${date} - ${entry.message}\n`);
+            const date = includeTimestamp ? new Date().toLocaleString('tr-TR', { timeZone: options.timeZone }) : undefined;
+            const formatted = waitlist.map(entry => formatEntry(entry, date));
 
             const dataBuf = Buffer.concat(formatted.map(item => Buffer.isBuffer(item) ? item : Buffer.from(String(item))));
 
