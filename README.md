@@ -67,6 +67,7 @@ connect(output: any, options?: {
 	timeZone?: string;         // passed to toLocaleString
 	continueFromLast?: boolean;// default false
 	Formatter?: (entry: LogEntry, dateString: string) => string | Buffer;
+	timestamp: boolean;
 })
 ```
 
