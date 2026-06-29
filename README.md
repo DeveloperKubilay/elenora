@@ -1,8 +1,10 @@
-# elenora
+# 🔥elenora 🔥
 
-Production‑ready, byte-based rolling file logger for Node.js.
+**Production‑ready**, byte-based rolling file **logger** for Node.js.
 
 Provides predictable file rotation, backup management and crash-safe flushing with zero runtime dependencies.
+
+![](https://github.com/DeveloperKubilay/elenora/blob/main/example.gif?raw=true)
 
 ## Quick Start
 
