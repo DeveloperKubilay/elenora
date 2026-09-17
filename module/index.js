@@ -163,7 +163,7 @@ module.exports = {
         function flushLogs(isSync = false) {
             if (waitlist.length === 0) return;
 
-            const date = includeTimestamp ? new Date().toLocaleString('tr-TR', { timeZone: options.timeZone }) : undefined;
+            const date = includeTimestamp ? new Date().toISOString() : undefined;
             const formatted = waitlist.map(entry => formatEntry(entry, date));
 
             const dataBuf = Buffer.concat(formatted.map(item => Buffer.isBuffer(item) ? item : Buffer.from(String(item))));

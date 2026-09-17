@@ -64,7 +64,6 @@ connect(output: any, options?: {
 	maxSize?: number;          // byte, varsayılan 5 * 1024 * 1024
 	backupCount?: number;      // varsayılan 0
 	interval?: number;         // ms, varsayılan 1000
-	timeZone?: string;         // toLocaleString'e aktarılır
 	continueFromLast?: boolean;// varsayılan false
 	Formatter?: (entry: LogEntry, dateString: string) => string | Buffer;
 	timestamp: boolean;
